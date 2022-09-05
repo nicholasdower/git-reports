@@ -1,0 +1,13 @@
+/.install.deps
+
+/data
+/reports
+
+/*.config.json
+!/example.config.json
+
+!/lib/reports/custom
+/lib/reports/custom/*
+!/lib/reports/custom/example.rb
+
+/.DS_Store
