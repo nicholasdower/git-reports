@@ -1,7 +1,14 @@
 require_relative '../report'
 
 class Example < Report
-  def generate(config, prs_per_day)
+  def initialize(config)
+    super
+  end
+
+  def on_day(day, prs, commits)
+  end
+
+  def on_done
   end
 end
 

@@ -3,7 +3,9 @@
   "github_token": "foo",
   "start_day": "2022-01-01",
   "auto_regex": "AUTO",
-  "github_search": "org:github",
+  "prs_github_search": "org:github",
+  "commits_github_search": "org:github",
+  "rate_limit": 11,
   "user_breakdown": false,
   "bots": [
     "user1"

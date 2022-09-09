@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="data.js"></script>
+
+    <script type="text/javascript">
+      google.charts.load('current', {packages: ['corechart', 'line']});
+      google.charts.setOnLoadCallback(draw);
+
+      function draw() {
+        chart_configs.forEach((config) => {
+          var dataTable = new google.visualization.DataTable();
+          config["columns"].forEach((column) => {
+            dataTable.addColumn(column["type"], column["label"]);
+          });
+          if (config["columns"][0]["type"] == "date") {
+            config["rows"].forEach((row) => {
+              row[0] = new Date(row[0]);
+            });
+          }
+          dataTable.addRows(config["rows"]);
+
+          var h2 = document.createElement('h2');
+          h2.innerHTML = config["name"];
+          document.body.appendChild(h2);
+
+          var div = document.createElement('div');
+          document.body.appendChild(div);
+
+          var chart = new google.visualization.LineChart(div);
+          chart.draw(dataTable, config["options"]);
+        });
+      }
+    </script>
+  </head>
+</html>

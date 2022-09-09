@@ -6,14 +6,14 @@ require 'octokit'
 Dir.chdir('lib') { Dir.glob('reports/**/*.rb').each { |file| require_relative file } }
 
 class Generator
-  MIN_DELAY = 10
-
   DEFAULT_CONFIG = {
     start_day: '2022-01-01',
     github_token: nil,
     end_day: (Date.today - 1).to_s,
     auto_regex: nil,
-    github_search: nil,
+    rate_limit: 11,
+    prs_github_search: nil,
+    commits_github_search: nil,
     reports_dir: 'reports',
     user_breakdown: false,
     bots: [],
@@ -31,18 +31,75 @@ class Generator
     @config = parse_config(file: config_file)
     @client = Octokit::Client.new(:access_token => @config[:github_token])
 
-    FileUtils.mkdir_p("data/#{@config[:name]}")
+    FileUtils.mkdir_p("data/#{@config[:name]}/commits")
+    FileUtils.mkdir_p("data/#{@config[:name]}/prs")
     FileUtils.rm_rf("reports/#{@config[:name]}")
     FileUtils.mkdir_p("reports/#{@config[:name]}")
 
     days = find_days_in_range(@config[:start_day], @config[:end_day])
 
-    fetch_missing_pr_data(days)
-    prs_per_day = load_pr_data(days)
+    fetch_missing_data(days.reverse)
 
-    Report.all.each do |report|
-      report.new(@config, prs_per_day).generate(@config, prs_per_day)
+    #downloaded_shas = commits_per_day.flat_map do |day, commits|
+    #  commits.map do |commit|
+    #    commit['sha']
+    #  end
+    #end
+    #commits_per_day.each do |day, commits|
+    #  if day > Date.today - 10
+    #    commits.each do |commit|
+    #      commit['parents'].map do |parent|
+    #        unless downloaded_shas.include?(parent['sha'])
+    #          puts parent['html_url']
+    #        end
+    #      end
+    #    end
+    #  end
+    #end
+    #parent_shas = commits_per_day.flat_map do |day, commits|
+    #  commits.flat_map do |commit|
+    #    commit['parents'].map do |parent|
+    #      parent['sha']
+    #    end
+    #  end
+    #end
+    #missing_shas = downloaded_shas - parent_shas
+
+    reports = Report.all.map do |report|
+      report.new(@config)
     end
+
+    days.each do |day|
+      prs = get_prs_from_file(day)
+      commits = get_commits_from_file(day)
+      reports.each do |report|
+        report.on_day(day, prs, commits)
+      end
+    end
+
+    chart_configs = []
+    reports.each do |report|
+      report.on_done
+      chart_config = report.chart_config
+      if chart_config.is_a?(Array)
+        chart_configs.concat(chart_config)
+      elsif chart_config.is_a?(Hash)
+        chart_configs << chart_config if chart_config
+      elsif !chart_config.nil?
+        raise "Invalid chart config for #{report}"
+      end
+    end
+
+    File.write("reports/#{@config[:name]}/data.js", "chart_configs = #{JSON.pretty_generate(chart_configs)}")
+    FileUtils.cp('github-reports.html', "reports/#{@config[:name]}/")
+
+    #prs_per_day.each do |day, prs|
+    #  prs.each do |pr|
+    #    if pr['user']['login'] == 'dziemba'
+    #      puts pr['title']
+    #    end
+    #  end
+    #end
   end
 
   private
@@ -60,7 +117,8 @@ class Generator
     raise "Missing config name." unless config[:name]
 
     raise "Missing GitHub token." unless config[:github_token]
-    raise "Missing GitHub search." unless config[:github_search]
+    raise "Missing PR GitHub search." unless config[:prs_github_search]
+    raise "Missing commit GitHub search." unless config[:commits_github_search]
 
     user_breakdown = config[:user_breakdown]
     raise "Invalid team config" unless user_breakdown.is_a?(TrueClass) || user_breakdown.is_a?(FalseClass)
@@ -82,60 +140,89 @@ class Generator
     config
   end
 
-  def fetch_missing_pr_data(days)
-    days = days.select do |day, i|
-      !pr_file_exists?(day)
+  def fetch_missing_data(days)
+    commits_days = days.select do |day, i|
+      !commits_file_exists?(day)
     end
+    prs_days = days.select do |day, i|
+      !prs_file_exists?(day)
+    end
+    days = (commits_days.to_set + prs_days.to_set).to_a
 
     if days.empty?
       @log.puts "All data already fetched."
       return
     end
 
-    @log.puts "Fetching PR counts for #{days.size} day(s)"
+    @log.puts "Fetching data for #{days.size} day(s)"
 
     days.each_with_index do |day, i|
-      file_name = "data/#{@config[:name]}/#{day}"
-      @log.puts "Fetching #{day} (#{i + 1} of #{days.size})"
-      prs = get_prs_from_api(day)
-      @log.puts "Fetched: #{day}, #{prs.size}"
-      File.open(file_name, 'w') do |file|
-        file.write(prs.to_json)
+      if prs_days.include?(day)
+        @log.puts "Fetching PR data for #{day} (#{i + 1} of #{days.size})"
+        File.open("data/#{@config[:name]}/prs/#{day}", 'w') do |file|
+          file.write(get_prs_from_api(day).to_json)
+        end
+        chill unless i == days.size - 1 && commits_days.include?(day)
       end
-      chill unless i == days.size - 1
+
+      if commits_days.include?(day)
+        @log.puts "Fetching commit data for #{day} (#{i + 1} of #{days.size})"
+        file_name = "data/#{@config[:name]}/commits/#{day}"
+        File.open("data/#{@config[:name]}/commits/#{day}", 'w') do |file|
+          file.write(get_commits_from_api(day).to_json)
+        end
+        chill unless i == days.size - 1
+      end
     end
   end
 
-  def load_pr_data(days)
-    days.map do |day|
-      [day, get_prs_from_file(day)]
-    end.to_h
-  end
-
   def chill
-    rate_limit = @client.rate_limit
-    delay = (rate_limit.resets_in.to_f / rate_limit.remaining.to_f).ceil
-    delay = [MIN_DELAY, delay].max
-    @log.puts "Sleeping #{delay}s\t(Rate Limit: #{rate_limit.limit}\tRemaining: #{rate_limit.remaining}\tReset: #{rate_limit.resets_in}s)"
+    delay = @config[:rate_limit]
+    @log.puts "Sleeping #{delay}s"
     sleep(delay)
   end
 
-  def pr_file_exists?(day)
-    file_name = "data/#{@config[:name]}/#{day}"
+  def prs_file_exists?(day)
+    file_name = "data/#{@config[:name]}/prs/#{day}"
+    File.exist?(file_name) && File.mtime(file_name).to_date > day
+  end
+
+  def commits_file_exists?(day)
+    file_name = "data/#{@config[:name]}/commits/#{day}"
     File.exist?(file_name) && File.mtime(file_name).to_date > day
   end
 
   def get_prs_from_file(day)
-    file_name = "data/#{@config[:name]}/#{day}"
+    file_name = "data/#{@config[:name]}/prs/#{day}"
     JSON.parse(File.read(file_name))
   end
 
+  def get_commits_from_file(day)
+    file_name = "data/#{@config[:name]}/commits/#{day}"
+    JSON.parse(File.read(file_name))
+  rescue StandardError
+    puts day
+    raise
+  end
+
+  def get_commits_from_api(day)
+    get_search_results_from_api do
+      @client.search_commits("#{@config[:commits_github_search]} committer-date:#{day}", { sort: 'created', order: 'desc', page: 1, per_page: 100})
+    end
+  end
+
   def get_prs_from_api(day)
-    result = @client.search_issues("is:pr #{@config[:github_search]} created:#{day}", { sort: 'created', order: 'desc', page: 1, per_page: 100})
-    prs = []
+    get_search_results_from_api do
+      @client.search_issues("is:pr #{@config[:prs_github_search]} created:#{day}", { sort: 'created', order: 'desc', page: 1, per_page: 100})
+    end
+  end
+
+  def get_search_results_from_api
+    result = yield
+    items = []
 
     while true
-      prs.concat(result.items.map(&:to_hash))
+      items.concat(result.items.map(&:to_hash))
 
       if @client.last_response.rels[:next]
         chill
@@ -145,7 +232,7 @@ class Generator
       end
     end
 
-    prs
+    items
   end
 
   def find_days_in_range(start_day, end_day)
