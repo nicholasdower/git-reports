@@ -89,8 +89,11 @@ class Generator
         raise "Invalid chart config for #{report}"
       end
     end
+    chart_configs.sort! { |a, b| [a[:group], a[:group_sort]] <=> [b[:group], b[:group_sort]] }
 
     File.write("reports/#{@config[:name]}/data.js", "chart_configs = #{JSON.pretty_generate(chart_configs)}")
+    FileUtils.cp('github-reports.js', "reports/#{@config[:name]}/")
+    FileUtils.cp('github-reports.css', "reports/#{@config[:name]}/")
     FileUtils.cp('github-reports.html', "reports/#{@config[:name]}/")
 
     #prs_per_day.each do |day, prs|

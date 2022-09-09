@@ -89,7 +89,9 @@ Data is stored in the `data` directory and reused between runs. New data is only
 - commits_per_day.tsv
 - commits_per_week.tsv
 - commits_per_month.tsv
-- top_users.tsv
+- top_users_last_week.tsv
+- top_users_last_month.tsv
+- top_users_last_year.tsv
 
 ### User Group Reports
 

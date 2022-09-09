@@ -24,7 +24,10 @@ class PrsPerWeek < Report
 
   def chart_config
     {
+      type: "line",
       name: 'Pull Requests Per Week',
+      group: 'Pull Requests',
+      group_sort: 2,
       options: {
         hAxis: { title: 'Week' },
         vAxis: { title: 'Pull Requests' }

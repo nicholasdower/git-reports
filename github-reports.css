@@ -1,0 +1,6 @@
+.top-users.group{
+  display: flex;
+}
+.top-users.group .chart-container {
+  flex: 1;
+}

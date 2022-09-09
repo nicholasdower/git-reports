@@ -24,7 +24,10 @@ class CommitsPerWeek < Report
 
   def chart_config
     {
+      type: "line",
       name: 'Commits Per Week',
+      group: 'Commits',
+      group_sort: 2,
       options: {
         hAxis: { title: 'Week' },
         vAxis: { title: 'Commits' }

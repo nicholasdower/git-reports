@@ -24,7 +24,10 @@ class PrsPerMonth < Report
 
   def chart_config
     {
+      type: "line",
       name: 'Pull Requests Per Month',
+      group: 'Pull Requests',
+      group_sort: 3,
       options: {
         hAxis: { title: 'Month' },
         vAxis: { title: 'Pull Requests' }

@@ -45,9 +45,12 @@ class UserGroupPrsPerMonth < Report
   end
 
   def chart_config
-    @config[:user_groups].map do |name, user_group|
+    @config[:user_groups].each_with_index.map do |(name, user_group), index|
       {
+        type: "line",
         name: "#{name} User Group Pull Requests Per Month",
+        group: "#{name} User Group",
+        group_sort: index + 1,
         options: {
           hAxis: { title: 'Month' },
           vAxis: { title: 'Pull Requests' }

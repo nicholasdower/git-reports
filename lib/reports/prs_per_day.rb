@@ -21,7 +21,10 @@ class PrsPerDay < Report
 
   def chart_config
     {
+      type: "line",
       name: 'Pull Requests Per Day',
+      group: 'Pull Requests',
+      group_sort: 1,
       options: {
         hAxis: { title: 'Day' },
         vAxis: { title: 'Pull Requests' }
