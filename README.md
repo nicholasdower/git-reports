@@ -43,17 +43,17 @@ Various options are controlled via a JSON file. To start, copy `example.config.j
   # Number of seconds to wait between API requests. Defaults to 11 seconds.
   "rate_limit": 11,
 
-  # Whether to include user-specific data in team reports. Defaults to false.
+  # Whether to include user-specific data in reports. Defaults to false.
   "user_breakdown": false,
 
-  # Mapping of team name to list of GitHub usernames. Weekly and monthly PR reports will be generated for each team. Defaults to {}.
-  "teams": {
-    "team1": [
+  # Mapping of group name to list of GitHub usernames. Weekly and monthly PR reports will be generated for each group. Defaults to {}.
+  "user_groups": {
+    "group1": [
       "user1",
       "user2",
       ...
     ],
-    "team2": [
+    "group2": [
       "user3",
       "user4",
       ...
@@ -91,9 +91,9 @@ Data is stored in the `data` directory and reused between runs. New data is only
 - commits_per_month.tsv
 - top_users.tsv
 
-### Team reports
+### User Group Reports
 
-It is also possible to generate team reports with or without data about specific team members. See the Configuration section above.
+It is also possible to generate reports for groups of users with or without data about specific users. See the Configuration section above.
 
 ### Custom reports
 

@@ -10,8 +10,8 @@
   "bots": [
     "user1"
   ],
-  "teams": {
-    "team1": [
+  "user_groups": {
+    "group1": [
       "user2"
     ]
   }
