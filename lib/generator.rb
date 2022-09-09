@@ -162,18 +162,16 @@ class Generator
     days.each_with_index do |day, i|
       if prs_days.include?(day)
         @log.puts "Fetching PR data for #{day} (#{i + 1} of #{days.size})"
-        File.open("data/#{@config[:name]}/prs/#{day}", 'w') do |file|
-          file.write(get_prs_from_api(day).to_json)
-        end
+        prs = get_prs_from_api(day)
+        File.write("data/#{@config[:name]}/prs/#{day}", prs.to_json)
         chill unless i == days.size - 1 && commits_days.include?(day)
       end
 
       if commits_days.include?(day)
         @log.puts "Fetching commit data for #{day} (#{i + 1} of #{days.size})"
         file_name = "data/#{@config[:name]}/commits/#{day}"
-        File.open("data/#{@config[:name]}/commits/#{day}", 'w') do |file|
-          file.write(get_commits_from_api(day).to_json)
-        end
+        commits = get_commits_from_api(day)
+        File.write("data/#{@config[:name]}/commits/#{day}", commits.to_json)
         chill unless i == days.size - 1
       end
     end
@@ -203,7 +201,7 @@ class Generator
   def get_commits_from_file(day)
     file_name = "data/#{@config[:name]}/commits/#{day}"
     JSON.parse(File.read(file_name))
-  rescue StandardError
+  rescue
     puts day
     raise
   end
