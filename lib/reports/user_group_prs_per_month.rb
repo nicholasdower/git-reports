@@ -24,7 +24,7 @@ class UserGroupPrsPerMonth < Report
 
   def on_done
     @config[:user_groups].each do |name, user_group|
-      open("reports/#{@config[:name]}/#{name.downcase}user_group_prs_per_month.tsv", 'w') do |out|
+      open("reports/#{@config[:name]}/#{name.downcase}_user_group_prs_per_month.tsv", 'w') do |out|
         if @config[:user_breakdown]
           out.puts (['month'] + user_group + ['total']).join("\t")
         else
